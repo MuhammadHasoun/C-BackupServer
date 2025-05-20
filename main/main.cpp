@@ -667,28 +667,108 @@ int CompareBackup(char * router_name,char * data1){
 }
 
 
-void CheckBackupStatus(){
-	SQLHandler sq("localhost","user","1234","database",3306);
-        MYSQL * conn = sq.Connector();
-	std::string query = "SELECT * FROM backup where version_number = "+to_string(GetCurrentVersion());
-        sq.ExecuteQuery(conn,query.c_str());
-	MYSQL_RES * result = sq.GetResults(conn);
-        int fields_num = mysql_num_fields(result);
-        int rows_num = mysql_num_rows(result);
-	std::string body;
-        MYSQL_ROW row;
-        int i = 0;
-        int router_index = 0;
+void CheckBackupStatus() {
+    SQLHandler sq("localhost", "username", "1234", "db", 3306);
+    MYSQL* conn = sq.Connector();
+    if (conn == nullptr) {
+        // Connection failed
+        return;
+    }
 
-        if (result != nullptr){
-                while((row = mysql_fetch_row(result)) != NULL){
-			if (CompareBackup(row[1],row[5]) == 0){
-				body = std::string("Hello Aron\n") + std::string("RouterName: "+std::string(row[1])) + std::string("\nVersion: "+ std::string(row[4])) + std::string("\nNew Threat");
-				SendEmail(body.c_str());
-			}
-		}
-	}
+    MYSQL_STMT* stmt = mysql_stmt_init(conn);
+    if (!stmt) return;
+
+    const char* query = "SELECT * FROM backup WHERE version_number = ?";
+    if (mysql_stmt_prepare(stmt, query, strlen(query))) {
+        mysql_stmt_close(stmt);
+        return;
+    }
+
+    int currentVersion = GetCurrentVersion();
+
+    MYSQL_BIND bind_param[1];
+    memset(bind_param, 0, sizeof(bind_param));
+
+    bind_param[0].buffer_type = MYSQL_TYPE_LONG;
+    bind_param[0].buffer = (char*)&currentVersion;
+    bind_param[0].is_null = 0;
+    bind_param[0].length = 0;
+
+    if (mysql_stmt_bind_param(stmt, bind_param)) {
+        mysql_stmt_close(stmt);
+        return;
+    }
+
+    if (mysql_stmt_execute(stmt)) {
+        mysql_stmt_close(stmt);
+        return;
+    }
+
+    // Verkrijg metadata van resultaat
+    MYSQL_RES* meta = mysql_stmt_result_metadata(stmt);
+    if (!meta) {
+        mysql_stmt_close(stmt);
+        return;
+    }
+
+    int field_count = mysql_num_fields(meta);
+
+    // Maak bind structuren voor resultaat
+    MYSQL_BIND* bind_result = new MYSQL_BIND[field_count];
+    memset(bind_result, 0, sizeof(MYSQL_BIND) * field_count);
+
+    // Voor eenvoud: we gaan ervan uit dat alle velden strings zijn, max 1024 chars
+    char** buffers = new char*[field_count];
+    unsigned long* lengths = new unsigned long[field_count];
+    my_bool* is_null = new my_bool[field_count];
+
+    for (int i = 0; i < field_count; ++i) {
+        buffers[i] = new char[1024];
+        memset(buffers[i], 0, 1024);
+        bind_result[i].buffer_type = MYSQL_TYPE_STRING;
+        bind_result[i].buffer = buffers[i];
+        bind_result[i].buffer_length = 1024;
+        bind_result[i].length = &lengths[i];
+        bind_result[i].is_null = &is_null[i];
+    }
+
+    if (mysql_stmt_bind_result(stmt, bind_result)) {
+        // cleanup
+        for (int i = 0; i < field_count; ++i) delete[] buffers[i];
+        delete[] buffers;
+        delete[] lengths;
+        delete[] is_null;
+        delete[] bind_result;
+        mysql_free_result(meta);
+        mysql_stmt_close(stmt);
+        return;
+    }
+
+    std::string body;
+
+    // Loop over resultaten
+    while (mysql_stmt_fetch(stmt) == 0) {
+        // row data zit nu in buffers[i], let op nulls
+        const char* router_name = is_null[1] ? "" : buffers[1];
+        const char* data = is_null[5] ? "" : buffers[5];
+        const char* version = is_null[4] ? "" : buffers[4];
+
+        if (CompareBackup((char*)router_name, (char*)data) == 0) {
+            body = std::string("Hello Aron\nRouterName: ") + router_name + "\nVersion: " + version + "\nNew Threat";
+            SendEmail(body.c_str());
+        }
+    }
+
+    // Cleanup geheugen
+    for (int i = 0; i < field_count; ++i) delete[] buffers[i];
+    delete[] buffers;
+    delete[] lengths;
+    delete[] is_null;
+    delete[] bind_result;
+    mysql_free_result(meta);
+    mysql_stmt_close(stmt);
 }
+
 
 int main(){
 	int versie_nummer = GetCurrentVersion(); //ReadVersion();
