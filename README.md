@@ -1,80 +1,80 @@
 
-# Daemon Server with MySQL and Email Notifications
+# Daemon Server met MySQL en E-mailmeldingen
 
-## Overview
+## Overzicht
 
-This project is a Linux daemon server written in C++ that connects to a MySQL database and sends email notifications. It logs activities and handles system signals for graceful shutdown.
+Dit project is een Linux daemon-server geschreven in C++ die verbinding maakt met een MySQL-database en e-mailmeldingen verstuurt. Het logt activiteiten en behandelt systeemsignalen voor een nette afsluiting.
 
-## Features
+## Functionaliteiten
 
-- Runs as a daemon process
-- Connects to a MySQL database to fetch data
-- Sends emails using libcurl SMTP (Gmail example)
-- Logs events to a log file (`/tmp/daemon_server_log.txt`)
-- Handles UNIX signals to shutdown cleanly
+- Draait als een daemon-proces
+- Verbindt met een MySQL-database om gegevens op te halen
+- Verstuurt e-mails via libcurl SMTP (voorbeeld met Gmail)
+- Logt gebeurtenissen naar een logbestand (`/tmp/daemon_server_log.txt`)
+- Verwerkt UNIX-signalen voor nette afsluiting
 
-## Requirements
+## Vereisten
 
-- Linux environment
-- MySQL client libraries and server
-- libcurl development libraries
-- Build tools (g++)
+- Linux omgeving
+- MySQL client bibliotheken en server
+- libcurl development bibliotheken
+- Bouwtools (g++)
 
-## Installation
+## Installatie
 
-1. Install dependencies (Debian/Ubuntu example):
+1. Installeer de benodigde pakketten (voorbeeld voor Debian/Ubuntu):
 
 ```bash
 sudo apt-get update
 sudo apt-get install libmysqlclient-dev libcurl4-openssl-dev g++
 ```
 
-2. Build the project:
+2. Compileer het project:
 
 ```bash
 g++ -o daemon_server daemon_server.cpp -lmysqlclient -lcurl
 ```
 
-## Configuration
+## Configuratie
 
-- Update MySQL connection details in the source code:
+- Pas de MySQL verbindingsgegevens aan in de broncode:
 
 ```cpp
 char* server = "localhost";
 char* user = "root";
-char* password = "example"; // Your MySQL password
+char* password = "voorbeeld"; // Jouw MySQL wachtwoord
 char* database = "users";
 int mysql_port = 3306;
 ```
 
-- Update SMTP email credentials in the `sendEmail` function:
+- Pas de SMTP e-mailgegevens aan in de functie `sendEmail`:
 
 ```cpp
-curl_easy_setopt(curl, CURLOPT_USERNAME, "your_email@gmail.com");
-curl_easy_setopt(curl, CURLOPT_PASSWORD, "your_password");
-curl_easy_setopt(curl, CURLOPT_MAIL_FROM, "<your_email@gmail.com>");
+curl_easy_setopt(curl, CURLOPT_USERNAME, "jouw_email@gmail.com");
+curl_easy_setopt(curl, CURLOPT_PASSWORD, "jouw_wachtwoord");
+curl_easy_setopt(curl, CURLOPT_MAIL_FROM, "<jouw_email@gmail.com>");
 ```
 
-## Running
+## Uitvoering
 
-Run the compiled daemon server binary:
+Start de gecompileerde daemon server:
 
 ```bash
 ./daemon_server
 ```
 
-Check the log file at `/tmp/daemon_server_log.txt` for activity.
+Bekijk het logbestand voor activiteit: `/tmp/daemon_server_log.txt`
 
-## Signals
+## Signalen
 
-- Press `Ctrl+C` or send SIGINT to shutdown gracefully.
+- Gebruik `Ctrl+C` of stuur SIGINT om de server netjes af te sluiten.
 
-## Notes
+## Opmerkingen
 
-- For production, use secure methods to store credentials.
-- Consider using environment variables or config files.
-- Gmail SMTP requires app passwords or OAuth2 setup.
+- Gebruik in productie altijd veilige methodes om wachtwoorden op te slaan.
+- Denk aan het gebruik van omgevingsvariabelen of configuratiebestanden.
+- Gmail SMTP vereist app-wachtwoorden of OAuth2 authenticatie.
 
-## License
+## Licentie
 
-This project is provided as-is without warranty.
+Dit project wordt geleverd zonder enige garantie.
