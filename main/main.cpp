@@ -775,87 +775,91 @@ void CheckBackupStatus() {
 }
 
 
-int main(){
-	int versie_nummer = GetCurrentVersion(); //ReadVersion();
-	int days_count = GetDaysCount();
-	// Create the daemon process
-    	createDaemon();
-	//WriteCurrentVersion(5);
-	while(1){
-		try{
+int main() {
+    int versie_nummer = GetCurrentVersion();
+    int days_count = GetDaysCount();
 
-			struct tables_struct tbs;
-	        	struct routers_info router_struct;
-	        	router_struct.ip = NULL;       // Initialize pointer to NULL
-	        	router_struct.name = NULL;     // Initialize pointer to NULL
-	        	router_struct.usernames = NULL; // Optional, initialize to NULL if used
-	        	router_struct.passwords = NULL; // Optional, initialize to NULL if used
-	        	router_struct.is_router = 0;   // Initialize router status
-	        	router_struct.routers_only_index = 0;
+    // Start de daemon
+    createDaemon();
 
-	        	// server , user, password, database, port = 0 - default
-	        	SQLHandler sq(hostname,user_db,user_pass,data_db_name,db_port);
-	        	MYSQL * conn = sq.Connector();
-	        	if (conn == nullptr){
-	                	return 1;
-	        	}
-	        	// get all tables
-	        	CollectTables(&sq,conn,&tbs);
-			int target_table = GetTargetTable(tbs);
-	        	// get and save all routers info in a struct
-	        	GetDevicesInfo(&sq,tbs.tables[target_table],&router_struct,conn);
+    while (true) {
+        try {
+            // Initialiseer structen
+            struct tables_struct tbs;
+            struct routers_info router_struct = {nullptr, nullptr, nullptr, nullptr, 0, 0};
 
-	        	int target_device = 0;
-	        	int is_router = 0;
-	        	char * device_name = nullptr;
-	        	char * response = nullptr;
-			char * device_full_info = nullptr;
-			char * location = nullptr;
-			versie_nummer++;
-			//WriteCurrentVersion(versie_nummer);
-	        	for (int i = 0; i < router_struct.all_devices; i++){
-				    try{
-	                		target_device = i;
-	                		std::string host = std::string(router_struct.ip[target_device]);
-	                		std::string username = std::string(router_struct.usernames[target_device]);
-	                		std::string password = std::string(router_struct.passwords[target_device]);
-	                		device_name = router_struct.name[target_device];
-	                		is_router = router_struct.is_router[target_device];
-	                		// ssh process
-	                		SSHHandler sh(host.c_str(),username.c_str(),password.c_str());
-	                		int session_status = sh.StartSession();
-	                		if (session_status == 0 ){
-	                        		response = sh.ExecuteCommand("export");
-						device_full_info = sh.ExecuteCommand("/system resource print");
-						location = sh.ExecuteCommand("/system identity print");
-						CreateQuery(conn,device_name,response,versie_nummer);
-						DeviceStatus(&router_struct,target_device,device_full_info,location);
-						sh.Disconnect();
-					}
-				    }catch (const std::exception& e) {
-					    std::cerr << "Error: " << e.what() << std::endl;
-				    }
+            // Maak databaseverbinding
+            SQLHandler sq(hostname, user_db, user_pass, data_db_name, db_port);
+            MYSQL* conn = sq.Connector();
+            if (conn == nullptr) {
+                std::cerr << "[FOUT] Geen verbinding met database." << std::endl;
+                return 1;
+            }
 
-	        	}
+            // Haal tabellen op en kies target
+            CollectTables(&sq, conn, &tbs);
+            int target_table = GetTargetTable(tbs);
+
+            // Laad routergegevens
+            GetDevicesInfo(&sq, tbs.tables[target_table], &router_struct, conn);
+
+            versie_nummer++;
+
+            // Verwerk elk apparaat
+            for (int i = 0; i < router_struct.all_devices; ++i) {
+                try {
+                    const std::string host = router_struct.ip[i];
+                    const std::string username = router_struct.usernames[i];
+                    const std::string password = router_struct.passwords[i];
+                    char* device_name = router_struct.name[i];
+                    int is_router = router_struct.is_router[i];
+
+                    std::cout << "[INFO] Verwerken van apparaat: " << device_name << std::endl;
+
+                    // Start SSH sessie
+                    SSHHandler sh(host.c_str(), username.c_str(), password.c_str());
+                    int session_status = sh.StartSession();
+
+                    if (session_status == 0) {
+                        char* response = sh.ExecuteCommand("export");
+                        char* device_full_info = sh.ExecuteCommand("/system resource print");
+                        char* location = sh.ExecuteCommand("/system identity print");
+
+                        if (response && device_full_info && location) {
+                            CreateQuery(conn, device_name, response, versie_nummer);
+                            DeviceStatus(&router_struct, i, device_full_info, location);
+                        }
+
+                        sh.Disconnect();
+                    }
+
+                } catch (const std::exception& e) {
+                    std::cerr << "[FOUT] Apparaat fout: " << e.what() << std::endl;
+                }
+            }
+
+            // Opruimen
             ClearTablesStructs(tbs);
-	    ClearRoutersStructs(router_struct);
-	      	std::this_thread::sleep_for(std::chrono::hours(24));
-		CheckBackupStatus();
-		UpdateDaysCount(days_count+1);
-		CheckIfExpired(days_count);
-		// clear switchesstatus table
-                ClearDeviceStatus();
-		}catch(const std::exception &e){
-		}
-	}
+            ClearRoutersStructs(router_struct);
 
+            // Wacht 24 uur
+            const auto SLEEP_DURATION = std::chrono::hours(24);
+            std::this_thread::sleep_for(SLEEP_DURATION);
 
+            // Back-up en statuscontroles
+            CheckBackupStatus();
+            int updated_days = GetDaysCount() + 1;
+            UpdateDaysCount(updated_days);
+            CheckIfExpired(updated_days);
 
+            // Verwijder oude statussen
+            ClearDeviceStatus();
 
+        } catch (const std::exception& e) {
+            std::cerr << "[FOUT] Hoofdlus: " << e.what() << std::endl;
+        }
+    }
 
-	/* show all routers ip addresses
-	for (int i = 0; i < router_struct.all_devices; i++ ){
-		std::cout << router_struct.ip[i] << std::endl;
-	*/
-	//return 0;
+    return 0;
 }
+
