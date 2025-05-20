@@ -74,7 +74,3 @@ Bekijk het logbestand voor activiteit: `/tmp/daemon_server_log.txt`
 - Gebruik in productie altijd veilige methodes om wachtwoorden op te slaan.
 - Denk aan het gebruik van omgevingsvariabelen of configuratiebestanden.
 - Gmail SMTP vereist app-wachtwoorden of OAuth2 authenticatie.
-
-## Licentie
-
-Dit project wordt geleverd zonder enige garantie.
