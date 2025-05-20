@@ -41,9 +41,9 @@ g++ -o daemon_server daemon_server.cpp -lmysqlclient -lcurl
 
 ```cpp
 char* server = "localhost";
-char* user = "root";
+char* user = "username";
 char* password = "voorbeeld"; // Jouw MySQL wachtwoord
-char* database = "users";
+char* database = "db";
 int mysql_port = 3306;
 ```
 
