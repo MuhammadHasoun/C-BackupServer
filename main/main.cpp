@@ -79,7 +79,7 @@ size_t payload_source(void *ptr, size_t size, size_t nmemb, void *data) {
 }
 
 char * GetReceiver(){
-    SQLHandler sq("localhost", "root", "1234", "users", 3306);
+    SQLHandler sq("localhost", "user", "1234", "database", 3306);
     MYSQL *conn = sq.Connector();
     sq.ExecuteQuery(conn, "SELECT * FROM receiver");
     MYSQL_RES *result = sq.GetResults(conn);
@@ -91,7 +91,7 @@ char * GetReceiver(){
 }
 
 int SendEmail(const char * new_body) {
-    SQLHandler sq("localhost", "root", "1234", "users", 3306);
+    SQLHandler sq("localhost", "user", "1234", "database", 3306);
     MYSQL *conn = sq.Connector();
     sq.ExecuteQuery(conn, "SELECT * FROM smtp_info");
     MYSQL_RES *result = sq.GetResults(conn);
@@ -386,7 +386,7 @@ void ClearRoutersStructs(struct routers_info &router_struct){
 
 
 void ClearDeviceStatus(){
-   SQLHandler sq("localhost","root","1234","users",3306);
+   SQLHandler sq("localhost","user","1234","database",3306);
     MYSQL * conn = sq.Connector();
     if (conn == nullptr){
 	return ;
@@ -396,7 +396,7 @@ void ClearDeviceStatus(){
 
 }
 void DeviceStatus(struct routers_info *router_struct, int index_number, char *device_full_info, char *location) {
-    SQLHandler sq("localhost","root","1234","users",3306);
+    SQLHandler sq("localhost","user","1234","database",3306);
     MYSQL * conn = sq.Connector();
     if (conn == nullptr){
 	return ;
@@ -567,7 +567,7 @@ int ReadVersion(){
 }
 
 int UpdateDaysCount(int days_count) {
-    SQLHandler sq("localhost", "root", "1234", "users", 3306);
+    SQLHandler sq("localhost", "user", "1234", "database", 3306);
     MYSQL* conn = sq.Connector();
 
     // Proper string concatenation
@@ -580,7 +580,7 @@ int UpdateDaysCount(int days_count) {
 }
 
 int GetExpireIndays(){
-	SQLHandler sq("localhost","root","1234","users",3306);
+	SQLHandler sq("localhost","user","1234","database",3306);
         MYSQL * conn = sq.Connector();
 	sq.ExecuteQuery(conn,"SELECT clear_day FROM backup ORDER BY id DESC LIMIT 1");
         MYSQL_RES * result = sq.GetResults(conn);
@@ -595,7 +595,7 @@ void CheckIfExpired(int day_count){
      int expiry_date = GetExpireIndays();
      if(day_count > expiry_date){
 	std::string expiry_query = "DELETE FROM backup WHERE created_date < NOW() - INTERVAL "+std::to_string(expiry_date)+" DAY LIMIT 1000";
-	SQLHandler sq("localhost","root","1234","users",3306);
+	SQLHandler sq("localhost","user","1234","database",3306);
     	MYSQL * conn = sq.Connector();
     	sq.ExecuteQuery(conn,expiry_query.c_str());
 	UpdateDaysCount(0);
@@ -605,7 +605,7 @@ void CheckIfExpired(int day_count){
 }
 
 int GetCurrentVersion(){
-	SQLHandler sq("localhost","root","1234","users",3306);
+	SQLHandler sq("localhost","user","1234","database",3306);
         MYSQL * conn = sq.Connector();
         sq.ExecuteQuery(conn,"SELECT version_number FROM backup ORDER BY id DESC LIMIT 1");
 	MYSQL_RES * result = sq.GetResults(conn);
@@ -616,7 +616,7 @@ int GetCurrentVersion(){
 
 }
 int GetDaysCount(){
-	SQLHandler sq("localhost","root","1234","users",3306);
+	SQLHandler sq("localhost","user","1234","database",3306);
         MYSQL * conn = sq.Connector();
         sq.ExecuteQuery(conn,"SELECT clear_contact_days FROM backup ORDER BY id DESC LIMIT 1");
         MYSQL_RES * result = sq.GetResults(conn);
@@ -627,7 +627,7 @@ int GetDaysCount(){
 }
 int CompareBackup(char * router_name,char * data1){
 	int status = 2;
-        SQLHandler sq("localhost","root","1234","users",3306);
+        SQLHandler sq("localhost","user","1234","database",3306);
         MYSQL * conn = sq.Connector();
         std::string query = "SELECT * FROM backup WHERE version_number = " 
                    + std::to_string(GetCurrentVersion() - 1) 
@@ -668,7 +668,7 @@ int CompareBackup(char * router_name,char * data1){
 
 
 void CheckBackupStatus(){
-	SQLHandler sq("localhost","root","1234","users",3306);
+	SQLHandler sq("localhost","user","1234","database",3306);
         MYSQL * conn = sq.Connector();
 	std::string query = "SELECT * FROM backup where version_number = "+to_string(GetCurrentVersion());
         sq.ExecuteQuery(conn,query.c_str());
@@ -709,7 +709,7 @@ int main(){
 	        	router_struct.routers_only_index = 0;
 
 	        	// server , user, password, database, port = 0 - default
-	        	SQLHandler sq("localhost","root","1234","users",3306);
+	        	SQLHandler sq("localhost","user","1234","database",3306);
 	        	MYSQL * conn = sq.Connector();
 	        	if (conn == nullptr){
 	                	return 1;
